@@ -1,0 +1,3 @@
+[submodule "src/com.julian-baumann.personio-deck/libs"]
+	path = src/com.julian-baumann.personio-deck/libs
+	url = https://github.com/elgatosf/streamdeck-javascript-sdk
