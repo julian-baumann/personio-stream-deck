@@ -22,8 +22,8 @@
     ],
     "Actions": [
         {
-            "Icon": "actions/template/assets/actionimage",
-            "Name": "Example Action",
+            "Icon": "actions/template/assets/action",
+            "Name": "Personio",
             "Controllers": ["Keypad"],
             "States": [
                 {
@@ -32,10 +32,10 @@
                 {
                     "Image": "actions/template/assets/actionImage",
                     "TitleAlignment": "middle",
-                    "FontSize": "16"
+                    "FontSize": "13"
                 }
             ],
-            "Tooltip": "This is an example tooltip",
+            "Tooltip": "Personio integration",
             "UUID": "com.julian-baumann.personio-deck.action",
             "PropertyInspectorPath": "actions/template/property-inspector/inspector.html"
         }

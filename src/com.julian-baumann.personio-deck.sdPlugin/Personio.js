@@ -1,3 +1,5 @@
+/// <reference path="Constants.js" />
+
 class PersonioSDK {
     clientId;
     clientSecret;
@@ -12,14 +14,16 @@ class PersonioSDK {
     titleUpdateInterval;
     startedDateTime;
     context;
+    projectChangeCallback;
 
-    constructor(clientId, clientSecret, employeeId, projectId, streamDeckSDK, context) {
+    constructor(clientId, clientSecret, employeeId, projectId, streamDeckSDK, context, projectChangeCallback) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.employeeId = employeeId;
         this.projectId = projectId;
         this.streamDeckSDK = streamDeckSDK;
         this.context = context;
+        this.projectChangeCallback = projectChangeCallback;
 
         this.checkStatus()
             .then()
@@ -39,18 +43,9 @@ class PersonioSDK {
             return this.token;
         }
 
-        const request = await fetch("https://api.personio.de/v1/auth", {
-            method: "POST",
-            body: JSON.stringify({
-                "client_id": this.clientId,
-                "client_secret": this.clientSecret
-            })
-        });
-
-        const response = await request.json();
-
-        this.token = response.data["token"];
-        this.tokenExpirationDate = currentSeconds + response.data["expires_in"];
+        const response = await getPersonioTokenWithCredentials(this.clientId, this.clientSecret);
+        this.token = response.token;
+        this.tokenExpirationDate = currentSeconds + response.expiresIn;
 
         return this.token;
     }
@@ -126,6 +121,7 @@ class PersonioSDK {
     setActiveState() {
         this.streamDeckSDK.setState(this.context, 1);
         this.streamDeckSDK.setTitle(this.context, this.getTime());
+        this.projectChangeCallback(this.projectId);
 
         this.titleUpdateInterval = setInterval(() => {
             this.streamDeckSDK.setTitle(this.context, this.getTime());
@@ -148,6 +144,8 @@ class PersonioSDK {
 
         const currentDate = new Date().toISOString().split("T")[0]
         const currentTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+        console.log(currentDate);
 
         this.currentDateTime = `${currentDate}T${currentTime}`;
 
