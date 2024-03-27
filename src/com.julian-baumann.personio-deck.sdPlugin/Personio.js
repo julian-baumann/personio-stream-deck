@@ -259,7 +259,7 @@ class PersonioSDK {
         const openAttendance = await this.getOpenAttendace();
 
         if (openAttendance) {
-            if (openAttendance.projectId != this.projectId) {
+            if (openAttendance.projectId != this.projectId && openAttendance?.attendanceId != this.currentAttendanceId) {
                 await this.deleteOrStopTracking(openAttendance, true);
                 await this.startTracking();
             } else {
