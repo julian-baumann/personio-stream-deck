@@ -8,23 +8,27 @@ let personioSDKInstances = {};
 myAction.onDidReceiveSettings(async ({ action, context, device, event, payload }) => {
     const settings = payload.settings;
 
-    if (settings.clientId && settings.clientSecret && settings.employeeId && settings.projectId) {
+    console.log("ProjectID: " + settings.projectId)
+
+    if (settings.clientId && settings.clientSecret && settings.employeeId) {
         if (personioSDKInstances[context]) {
             personioSDKInstances[context].clientId = settings.clientId;
             personioSDKInstances[context].clientSecret = settings.clientSecret;
             personioSDKInstances[context].employeeId = parseInt(settings.employeeId);
             personioSDKInstances[context].projectId = parseInt(settings.projectId);
+            personioSDKInstances[context].comment = settings.comment;
         } else {
             personioSDKInstances[context] = new PersonioSDK(
                 settings.clientId,
                 settings.clientSecret,
                 parseInt(settings.employeeId),
                 parseInt(settings.projectId),
+                settings.comment,
                 $SD,
                 context,
-                (projectId) => {
+                (projectId, attendanceId) => {
                     for (const [key, instance] of Object.entries(personioSDKInstances)) {
-                        if (instance.projectId != projectId) {
+                        if (instance.projectId != projectId && instance.currentAttendanceId != attendanceId) {
                             instance.setInactiveState();
                         }
                     }

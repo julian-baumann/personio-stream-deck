@@ -4,6 +4,7 @@ class PersonioSDK {
     clientId;
     clientSecret;
     employeeId;
+    comment;
     projectId;
     token;
     tokenExpirationDate;
@@ -15,12 +16,14 @@ class PersonioSDK {
     startedDateTime;
     context;
     projectChangeCallback;
+    disableAutoCheck = false;
 
-    constructor(clientId, clientSecret, employeeId, projectId, streamDeckSDK, context, projectChangeCallback) {
+    constructor(clientId, clientSecret, employeeId, projectId, comment, streamDeckSDK, context, projectChangeCallback) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.employeeId = employeeId;
         this.projectId = projectId;
+        this.comment = comment;
         this.streamDeckSDK = streamDeckSDK;
         this.context = context;
         this.projectChangeCallback = projectChangeCallback;
@@ -103,39 +106,47 @@ class PersonioSDK {
     }
 
     async checkStatus() {
+        if (this.disableAutoCheck) {
+            return;
+        }
+
         const openAttendance = await this.getOpenAttendace();
 
-        if (openAttendance && openAttendance.projectId == this.projectId) {
+        if (openAttendance && (openAttendance?.projectId == this.projectId || openAttendance?.attendanceId == this.currentAttendanceId)) {
             this.currentDateTime = openAttendance.startDateTime;
 
-            if (this.titleUpdateInterval == null) {
+            if (this.titleUpdateInterval == null && !this.disableAutoCheck) {
                 this.setActiveState();
             }
 
             return;
         }
 
-        this.setInactiveState();
+        if (!this.disableAutoCheck) {
+            this.setInactiveState();
+        }
     }
 
     setActiveState() {
         this.streamDeckSDK.setState(this.context, 1);
         this.streamDeckSDK.setTitle(this.context, this.getTime());
-        this.projectChangeCallback(this.projectId);
+        this.projectChangeCallback(this.projectId, this.currentAttendanceId);
 
-        this.titleUpdateInterval = setInterval(() => {
-            this.streamDeckSDK.setTitle(this.context, this.getTime());
-        }, 1000);
+        if (this.titleUpdateInterval == null) {
+            this.titleUpdateInterval = setInterval(() => {
+                this.streamDeckSDK.setTitle(this.context, this.getTime());
+            }, 1000);
+        }
     }
 
     setInactiveState() {
-        this.streamDeckSDK.setState(this.context, 0);
-        this.streamDeckSDK.clearTitle(this.context);
-
-        if (this.titleUpdateInterval) {
+        if (this.titleUpdateInterval != null) {
             clearInterval(this.titleUpdateInterval);
             this.titleUpdateInterval = null;
         }
+
+        this.streamDeckSDK.clearTitle(this.context);
+        this.streamDeckSDK.setState(this.context, 0);
     }
 
     async startTracking() {
@@ -145,8 +156,6 @@ class PersonioSDK {
         const currentDate = new Date().toISOString().split("T")[0]
         const currentTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-        console.log(currentDate);
-
         this.currentDateTime = `${currentDate}T${currentTime}`;
 
         this.currentAttendance = {
@@ -154,6 +163,7 @@ class PersonioSDK {
             date: currentDate,
             project_id: this.projectId,
             start_time: currentTime,
+            comment: this.comment,
             break: 0
         };
 
@@ -186,9 +196,7 @@ class PersonioSDK {
 
     async deleteTracking(attendanceId, skipStateChange) {
         if (!skipStateChange) {
-            console.log("Change to state 0");
-            this.streamDeckSDK.setState(this.context, 0);
-            this.streamDeckSDK.setTitle(this.context, "Stopping");
+            this.setInactiveState();
         }
 
         const options = {
@@ -208,12 +216,6 @@ class PersonioSDK {
     }
 
     async stopTracking(attendanceId, skipStateChange) {
-        if (!skipStateChange) {
-            console.log("Change to state 0");
-            this.streamDeckSDK.setState(this.context, 0);
-            this.streamDeckSDK.setTitle(this.context, "Stopping");
-        }
-
         const currentTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
         const options = {
@@ -245,6 +247,12 @@ class PersonioSDK {
     }
 
     async toggleTracking() {
+        this.disableAutoCheck = true;
+        if (this.titleUpdateInterval != null) {
+            clearInterval(this.titleUpdateInterval);
+            this.titleUpdateInterval = null;
+        }
+
         this.streamDeckSDK.setState(this.context, 1);
         this.streamDeckSDK.setTitle(this.context, "Changing");
 
@@ -260,5 +268,7 @@ class PersonioSDK {
         } else {
             await this.startTracking();
         }
+
+        this.disableAutoCheck = false;
     }
 }
